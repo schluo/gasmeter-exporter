@@ -1,0 +1,13 @@
+version: "2.2"
+services:
+  gasmeter:
+    image: gasmeter-exporter
+    container_name: gasmeter-exporter
+    restart: unless-stopped
+    ports:
+      - 9001:9001
+    user: "1000"
+    environment:
+      GASMETER_PORT: 9001
+      GASMETER_INTERVAL: 60
+      GASMETER_IP: 192.168.1.121
