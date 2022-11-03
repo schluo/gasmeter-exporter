@@ -16,5 +16,6 @@ Credential, Ports and Polling Interval are given by environmental variables (see
       GASMETER_PORT: 9001
       GASMETER_INTERVAL: 60
       GASMETER_IP: xxx.xxx.xxx.xxx
+      GASPRICE_FILE: File that define "gas working price", "calorific value" and price per kwh
 
 A Grafana Dashboard example is also provided as JSON template
