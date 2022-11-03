@@ -11,3 +11,7 @@ services:
       GASMETER_PORT: 9001
       GASMETER_INTERVAL: 60
       GASMETER_IP: 192.168.1.121
+      GASPRICE_FILE: /config/gasprice.json
+    volumes:
+      - /appdata/gasmeter-exporter/config:/config
+
