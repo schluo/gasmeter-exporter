@@ -40,31 +40,63 @@ from prometheus_client import start_http_server, Gauge, Info
 
 class GasmeterMetrics:
 
-    def __init__(self, polling_interval_seconds, gasmeter_ip):
+    def __init__(self, polling_interval_seconds, gasmeter_ip, gasprice_file):
         self.polling_interval_seconds = polling_interval_seconds
         self.gasmeter_ip = gasmeter_ip
+        self.gasprice_file = gasprice_file
 
         # Gasmeter's metrics to collect
 
         self.value = Gauge("value", "Calculated Value")
         self.raw = Gauge("raw", "Raw Value")
+        self.price = Gauge("gaspreis", "Current Price for Gas")
+        self.zustandszahl = Gauge("zustandszahl", "Current Zustandszahl")
+        self.brennwert = Gauge("brennwert", "Current brennwert")
+        self.value_in_eur = Gauge("value_in_eur", "Consumed Gas in EUR")
         self.error = Info('error', 'Error Status')
         self.timestamp = Info('timestamp', 'Timestamp')
 
     def retrieve_gasmeter_data(self):
         timestamp = datetime.datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
         try:
-            # try to get token
+            # try to get data from ESP
             url = 'http://' + self.gasmeter_ip + '/json'
             response = requests.get(url)
             out = json.loads(response.text)
             self.timestamp.info({'timestamp': out['main']['timestamp']})
             self.value.set(out['main']['value'])
             self.raw.set(out['main']['raw'])
-            self.error.info({'error':out['main']['error']})
+            self.error.info({'error': out['main']['error']})
 
         except Exception as err:
             print(timestamp + ": Not able to get value: " + str(err))
+
+        if self.gasprice_file != "":
+            try:
+                # try to get data from file
+                # Opening JSON file
+                f = open(self.gasprice_file)
+
+                # returns JSON object as a dictionary
+                price_details = json.load(f)
+
+                self.price.set(price_details['gaspreis'])
+                self.zustandszahl.set(price_details['zustandszahl'])
+                self.brennwert.set(price_details['brennwert'])
+
+                multiplicator = price_details['gaspreis'] * price_details['zustandszahl'] * price_details['brennwert']
+
+                self.value_in_eur.set(multiplicator * float(out['main']['value']))
+
+                # Closing file
+                f.close()
+            except Exception as err:
+                print(timestamp + ": Not able to get value: " + str(err))
+                self.value_in_eur.set(0)
+        else:
+            self.price.set(0)
+            self.zustandszahl.set(0)
+            self.brennwert.set(0)
 
     def run_metrics_loop(self):
         while True:
@@ -89,7 +121,12 @@ def main():
     except:
         gasmeter_ip = "192.168.1.121"
 
-    app_metrics = GasmeterMetrics(polling_interval_seconds, gasmeter_ip)
+    try:
+        gasprice_file = os.environ['GASPRICE_FILE']
+    except:
+        gasprice_file = ""
+
+    app_metrics = GasmeterMetrics(polling_interval_seconds, gasmeter_ip, gasprice_file)
     start_http_server(port)
     app_metrics.run_metrics_loop()
 
